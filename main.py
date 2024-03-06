@@ -46,14 +46,10 @@ async def my_event_handler(event):
     for match in matches:
         if "\n" in match:
             old_price = match.split(" ")[0]
-            new_str = True
         else:
             old_price = match.split("|")[0].replace(" ", "")
-            new_str = False
         if old_price.isdigit():
-            new_price = f"**Ставка до:** {int(old_price) - 200} | RUB"
-            new_price += '\n\n' if new_str else ''
-            new_msg = re.sub(regex_bid, new_price, msg)
+            new_msg = re.sub(regex_bid, '', msg)
     with Session(engine) as session:
         row = Messages(channel_id=event.chat_id, channel_name=event.chat.title, message=msg)
         session.add_all([row])
