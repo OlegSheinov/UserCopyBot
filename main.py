@@ -38,7 +38,7 @@ async def handler(event):
         await client.send_file('me', 'message.xlsx')
 
 
-@client.on(events.NewMessage(chats=my_chat))
+@client.on(events.NewMessage(chats=all_chats))
 async def my_event_handler(event):
     msg = event.text
     new_msg = msg
