@@ -55,7 +55,7 @@ async def my_event_handler(event):
         session.add_all([row])
         session.commit()
     new_msg = re.sub(regex_tg, new_tg, new_msg)
-    await client.send_message(715845455, new_msg)
+    await client.send_message(my_chat, new_msg)
 
 
 async def main():
