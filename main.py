@@ -7,14 +7,14 @@ from openpyxl import Workbook
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from telethon import TelegramClient, events
+from telethon.tl.types import PeerChat, PeerUser
 
 from models import Messages, Base
 
 load_dotenv()
 
 client = TelegramClient(session=os.getenv("SESSION_NAME"), api_id=int(os.getenv('API_ID')),
-                        api_hash=os.getenv('API_HASH'), system_version=platform.version(), device_model=platform.node(),
-                        app_version="1.0.0")
+                        api_hash=os.getenv('API_HASH'))
 all_chats = []
 my_chat = int(os.getenv('MY_CHANNEL'))
 new_tg = os.getenv('NEW_TG')
@@ -23,7 +23,7 @@ regex_tg = r'@\w*'
 engine = create_engine("sqlite:///base.db", echo=False)
 
 
-@client.on(events.NewMessage(chats='me', pattern='!excel'))
+@client.on(events.NewMessage(chats=PeerUser(user_id=715845455), pattern='!excel'))
 async def handler(event):
     with Session(engine) as session:
         result = select(Messages)
@@ -35,7 +35,7 @@ async def handler(event):
         for row in data:
             ws.append(row)
         wb.save('message.xlsx')
-        await client.send_file('me', 'message.xlsx')
+        await client.send_file(PeerUser(user_id=715845455), 'message.xlsx')
 
 
 @client.on(events.NewMessage(chats=all_chats))
