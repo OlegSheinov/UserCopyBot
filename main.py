@@ -14,7 +14,7 @@ from models import Messages, Base
 
 load_dotenv()
 
-logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
 logging.getLogger('pika').setLevel(logging.WARNING)
 log = logging.getLogger()
 
@@ -27,8 +27,11 @@ regex_bid = r'\*\*Ставка\s*до(?:\s*\(.*?\))?:\*\*\s*([\d\s]+(?:\|\s*[A-Z
 regex_tg = r'@\w*'
 engine = create_engine("sqlite:///base.db", echo=False)
 
+phone = os.getenv("PHONE")
+password = os.getenv("PASS")
 
-@client.on(events.NewMessage(chats=PeerUser(user_id=715845455), pattern='!excel'))
+
+@client.on(events.NewMessage(chats=[PeerUser(user_id=654553893), PeerUser(user_id=715845455)], pattern='!excel'))
 async def handler(event):
     with Session(engine) as session:
         result = select(Messages)
@@ -40,11 +43,12 @@ async def handler(event):
         for row in data:
             ws.append(row)
         wb.save('message.xlsx')
-        await client.send_file(PeerUser(user_id=715845455), 'message.xlsx')
+        await client.send_file(event.chat_id, 'message.xlsx')
 
 
 @client.on(events.NewMessage(chats=all_chats))
 async def my_event_handler(event):
+    log.info(f"Сообщение с канала {event.chat_id}. пересылаю в {my_chat}!")
     msg = event.text
     new_msg = msg
     matches = re.findall(regex_bid, msg)
@@ -64,6 +68,7 @@ async def my_event_handler(event):
 
 
 async def main():
+    log.info("Получаю список каналов.")
     async for dialog in client.iter_dialogs():
         if dialog.is_channel:
             all_chats.append(dialog.id)
@@ -71,10 +76,9 @@ async def main():
 
 if __name__ == "__main__":
     log.info("Запуск...")
-    with client:
+    with client.start(phone=lambda: phone, password=lambda: password):
         Base.metadata.create_all(engine)
-        client.start()
         client.session.save()
         client.loop.run_until_complete(main())
-        log.info("Получен список каналов.\n\nНачинаю слушать")
+        log.info("Получен список каналов. Начинаю слушать")
         client.run_until_disconnected()
