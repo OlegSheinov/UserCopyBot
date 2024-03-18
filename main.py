@@ -1,3 +1,4 @@
+import logging
 import os
 import platform
 import re
@@ -12,6 +13,10 @@ from telethon.tl.types import PeerChat, PeerUser
 from models import Messages, Base
 
 load_dotenv()
+
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
+logging.getLogger('pika').setLevel(logging.WARNING)
+log = logging.getLogger()
 
 client = TelegramClient(session=os.getenv("SESSION_NAME"), api_id=int(os.getenv('API_ID')),
                         api_hash=os.getenv('API_HASH'))
@@ -65,11 +70,11 @@ async def main():
 
 
 if __name__ == "__main__":
-    print("Запуск...", flush=True)
+    log.info("Запуск...")
     with client:
         Base.metadata.create_all(engine)
         client.start()
         client.session.save()
         client.loop.run_until_complete(main())
-        print("Получен список каналов.\n\nНачинаю слушать", flush=True)
+        log.info("Получен список каналов.\n\nНачинаю слушать")
         client.run_until_disconnected()
