@@ -65,9 +65,11 @@ async def main():
 
 
 if __name__ == "__main__":
+    print("Запуск...", flush=True)
     with client:
         Base.metadata.create_all(engine)
         client.start()
         client.session.save()
         client.loop.run_until_complete(main())
+        print("Получен список каналов.\n\nНачинаю слушать", flush=True)
         client.run_until_disconnected()
