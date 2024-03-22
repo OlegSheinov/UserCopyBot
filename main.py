@@ -1,6 +1,5 @@
 import logging
 import os
-import platform
 import re
 
 from dotenv import load_dotenv
@@ -8,7 +7,7 @@ from openpyxl import Workbook
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 from telethon import TelegramClient, events
-from telethon.tl.types import PeerChat, PeerUser
+from telethon.tl.types import PeerUser
 
 from models import Messages, Base
 
@@ -23,8 +22,8 @@ client = TelegramClient(session=os.getenv("SESSION_NAME"), api_id=int(os.getenv(
 all_chats = []
 my_chat = int(os.getenv('MY_CHANNEL'))
 new_tg = os.getenv('NEW_TG')
-regex_bid = r'\*\*Ставка\s*до(?:\s*\(.*?\))?:\*\*\s*([\d\s]+(?:\|\s*[A-Za-z]+)?|обсуждаемая)'
-regex_tg = r'@\w*'
+regex_bid = ["рейт", "ставк", "цена", "р/ч", "оплат"]
+regex_tg = r'@\w*|\[[^\]]+\]\([^)]+\)'
 engine = create_engine("sqlite:///base.db", echo=False)
 
 phone = os.getenv("PHONE")
@@ -46,19 +45,14 @@ async def handler(event):
         await client.send_file(event.chat_id, 'message.xlsx')
 
 
-@client.on(events.NewMessage(chats=all_chats))
+@client.on(events.NewMessage(chats=my_chat))
 async def my_event_handler(event):
     log.info(f"Сообщение с канала {event.chat_id}. пересылаю в {my_chat}!")
     msg = event.text
-    new_msg = msg
-    matches = re.findall(regex_bid, msg)
-    for match in matches:
-        if "\n" in match:
-            old_price = match.split(" ")[0]
-        else:
-            old_price = match.split("|")[0].replace(" ", "")
-        if old_price.isdigit():
-            new_msg = re.sub(regex_bid, '', msg)
+    new_msg = ''
+    for text in msg.split('\n'):
+        if not any(item.lower() in text.lower() for item in regex_bid):
+            new_msg += text + '\n'
     with Session(engine) as session:
         row = Messages(channel_id=event.chat_id, channel_name=event.chat.title, message=msg)
         session.add_all([row])
