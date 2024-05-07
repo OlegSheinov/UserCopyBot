@@ -45,20 +45,20 @@ async def handler(event):
         await client.send_file(event.chat_id, 'message.xlsx')
 
 
-@client.on(events.NewMessage(chats=my_chat))
+@client.on(events.NewMessage(chats=all_chats))
 async def my_event_handler(event):
-    log.info(f"Сообщение с канала {event.chat_id}. пересылаю в {my_chat}!")
     msg = event.text
-    new_msg = ''
-    for text in msg.split('\n'):
-        if not any(item.lower() in text.lower() for item in regex_bid):
-            new_msg += text + '\n'
-    with Session(engine) as session:
-        row = Messages(channel_id=event.chat_id, channel_name=event.chat.title, message=msg)
-        session.add_all([row])
-        session.commit()
-    new_msg = re.sub(regex_tg, new_tg, new_msg)
-    await client.send_message(my_chat, new_msg)
+    regex_pattern = re.compile('|'.join(regex_bid), re.IGNORECASE)
+    # Проверяем, содержит ли сообщение ключевые слова
+    if regex_pattern.search(msg):
+        # Если содержит, то пересылаем сообщение
+        log.info(f"Сообщение с канала {event.chat_id} пересылаю в {my_chat}!")
+        with Session(engine) as session:
+            row = Messages(channel_id=event.chat_id, channel_name=event.chat.title, message=msg)
+            session.add_all([row])
+            session.commit()
+        new_msg = re.sub(regex_tg, new_tg, msg)
+        await client.send_message(my_chat, new_msg)
 
 
 async def main():
