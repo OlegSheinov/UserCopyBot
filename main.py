@@ -3,13 +3,9 @@ import os
 import re
 
 from dotenv import load_dotenv
-from openpyxl import Workbook
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session
 from telethon import TelegramClient, events
-from telethon.tl.types import PeerUser
 
-from models import Messages, Base
+from api.post_vacancy import send_vacancy
 
 load_dotenv()
 
@@ -24,41 +20,20 @@ my_chat = int(os.getenv('MY_CHANNEL'))
 new_tg = os.getenv('NEW_TG')
 regex_bid = ["рейт", "ставк", "цена", "р/ч", "оплат"]
 regex_tg = r'@\w*|\[[^\]]+\]\([^)]+\)'
-engine = create_engine("sqlite:///base.db", echo=False)
 
 phone = os.getenv("PHONE")
 password = os.getenv("PASS")
-
-
-@client.on(events.NewMessage(chats=[PeerUser(user_id=654553893), PeerUser(user_id=715845455)], pattern='!excel'))
-async def handler(event):
-    with Session(engine) as session:
-        result = select(Messages)
-        wb = Workbook()
-        ws = wb.active
-        data = [["Channel id", "Channel name", "Message"]]
-        for message in session.scalars(result):
-            data.append([str(message.channel_id), message.channel_name, message.message])
-        for row in data:
-            ws.append(row)
-        wb.save('message.xlsx')
-        await client.send_file(event.chat_id, 'message.xlsx')
 
 
 @client.on(events.NewMessage(chats=all_chats))
 async def my_event_handler(event):
     msg = event.text
     regex_pattern = re.compile('|'.join(regex_bid), re.IGNORECASE)
-    # Проверяем, содержит ли сообщение ключевые слова
     if regex_pattern.search(msg):
-        # Если содержит, то пересылаем сообщение
         log.info(f"Сообщение с канала {event.chat_id} пересылаю в {my_chat}!")
-        with Session(engine) as session:
-            row = Messages(channel_id=event.chat_id, channel_name=event.chat.title, message=msg)
-            session.add_all([row])
-            session.commit()
-        new_msg = re.sub(regex_tg, new_tg, msg)
-        await client.send_message(my_chat, new_msg)
+        response = await send_vacancy(msg, str(event.chat_id))
+        if response:
+            pass
 
 
 async def main():
@@ -71,7 +46,6 @@ async def main():
 if __name__ == "__main__":
     log.info("Запуск...")
     with client.start(phone=lambda: phone, password=lambda: password):
-        Base.metadata.create_all(engine)
         client.session.save()
         client.loop.run_until_complete(main())
         log.info("Получен список каналов. Начинаю слушать")
